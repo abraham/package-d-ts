@@ -1,0 +1,37 @@
+{
+  "name": "package-d",
+  "version": "0.1.0",
+  "description": "package.json TypeScript types",
+  "main": "",
+  "scripts": {
+    "test": "npx tsc",
+    "crawl": "ts-node scripts/crawl.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/abraham/package-d.git"
+  },
+  "keywords": [
+    "package",
+    "typescript",
+    "types",
+    "node",
+    "npm"
+  ],
+  "author": "Abraham Williams <abraham@abrah.am>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/abraham/package-d/issues"
+  },
+  "homepage": "https://github.com/abraham/package-d#readme",
+  "devDependencies": {
+    "@types/async": "^2.0.49",
+    "@types/node": "^10.5.2",
+    "@types/node-fetch": "^2.1.1",
+    "async": "^2.6.1",
+    "node-fetch": "^2.1.2",
+    "ts-node": "^7.0.0",
+    "typescript": "^2.9.2"
+  },
+  "dependencies": {}
+}
