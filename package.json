@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npx tsc",
     "lint": "npx tsc --noEmit",
-    "test": "npx tsc",
+    "test": "npm run build",
     "crawl": "ts-node scripts/crawl.ts"
   },
   "repository": {
