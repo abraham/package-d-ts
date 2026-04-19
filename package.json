@@ -4,6 +4,8 @@
   "description": "package.json TypeScript types",
   "main": "",
   "scripts": {
+    "build": "npx tsc",
+    "lint": "npx tsc --noEmit",
     "test": "npx tsc",
     "crawl": "ts-node scripts/crawl.ts"
   },
