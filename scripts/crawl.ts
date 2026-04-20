@@ -16,53 +16,43 @@ const CONCURRENCY_LIMIT = 100;
 const API = 'https://replicate.npmjs.com/_all_docs';
 
 async function eachLimit<T>(values: T[], limit: number, worker: (value: T) => Promise<void>) {
-  let index = 0;
-
-  async function runWorker() {
-    while (index < values.length) {
-      const current = values[index];
-      index++;
-      await worker(current);
-    }
+  for (let index = 0; index < values.length; index += limit) {
+    await Promise.all(values.slice(index, index + limit).map((value) => worker(value)));
   }
-
-  await Promise.all(Array(Math.min(limit, values.length)).fill(undefined).map(() => runWorker()));
 }
 
 async function run() {
-  console.log(`Starting page ${page}`);
+  while (true) {
+    console.log(`Starting page ${page}`);
 
-  fs.writeFileSync(currentPagePath, String(page), { flag: 'w' });
+    fs.writeFileSync(currentPagePath, String(page), { flag: 'w' });
 
-  console.log(`${API}?limit=${PAGE_LIMIT}&skip=${page * PAGE_LIMIT}`);
+    console.log(`${API}?limit=${PAGE_LIMIT}&skip=${page * PAGE_LIMIT}`);
 
-  const res = await fetch(`${API}?limit=${PAGE_LIMIT}&skip=${page * PAGE_LIMIT}`);
-  const results: Rows = await res.json();
-  page++;
+    const res = await fetch(`${API}?limit=${PAGE_LIMIT}&skip=${page * PAGE_LIMIT}`);
+    const results: Rows = await res.json();
+    page++;
 
-  if (total_count === results.total_rows) {
-    console.log(`DONE! page: ${page} ${total_count} of ${results.total_rows}`);
-    return;
-  }
-
-  await eachLimit(results.rows, CONCURRENCY_LIMIT, async (row: Row) => {
-    const key = row.key;
-    console.log(`Crawling pkg ${total_count + 1} ${key}`);
-    const res = await fetch(`http://unpkg.com/${key}/package.json`);
-    const pkg = await res.text();
-    total_count++;
-    if (key.includes('/')) {
-      const dir = `./data/individual/${key.split('/')[0]}`;
-      if (!fs.existsSync(dir)){
-        fs.mkdirSync(dir);
-      }
+    if (total_count === results.total_rows) {
+      console.log(`DONE! page: ${page} ${total_count} of ${results.total_rows}`);
+      return;
     }
-    fs.writeFile(path.resolve(`./data/individual/${key}.json`), pkg, { flag: 'w' }, (error) => {
-      if (error) { console.log({ key, error }); }
-    });
-  });
 
-  await run();
+    await eachLimit(results.rows, CONCURRENCY_LIMIT, async (row: Row) => {
+      const key = row.key;
+      console.log(`Crawling pkg ${total_count + 1} ${key}`);
+      const res = await fetch(`http://unpkg.com/${key}/package.json`);
+      const pkg = await res.text();
+      total_count++;
+      if (key.includes('/')) {
+        const dir = `./data/individual/${key.split('/')[0]}`;
+        if (!fs.existsSync(dir)){
+          fs.mkdirSync(dir);
+        }
+      }
+      await fs.promises.writeFile(path.resolve(`./data/individual/${key}.json`), pkg, { flag: 'w' });
+    });
+  }
 }
 
 run();
