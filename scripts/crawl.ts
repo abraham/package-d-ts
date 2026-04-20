@@ -15,10 +15,22 @@ let total_count = page * PAGE_LIMIT;
 const CONCURRENCY_LIMIT = 100;
 const API = 'https://replicate.npmjs.com/_all_docs';
 
-async function eachLimit<T>(values: T[], limit: number, worker: (value: T) => Promise<void>) {
-  for (let index = 0; index < values.length; index += limit) {
-    await Promise.all(values.slice(index, index + limit).map((value) => worker(value)));
+async function eachLimit<T>(values: T[], limit: number, worker: (value: T, index: number) => Promise<void>) {
+  const executing = new Set<Promise<void>>();
+
+  for (let index = 0; index < values.length; index++) {
+    const value = values[index];
+    let task: Promise<void>;
+    task = worker(value, index).finally(() => {
+      executing.delete(task);
+    });
+    executing.add(task);
+    if (executing.size >= limit) {
+      await Promise.race(executing);
+    }
   }
+
+  await Promise.all(executing);
 }
 
 async function run() {
@@ -38,20 +50,21 @@ async function run() {
       return;
     }
 
-    await eachLimit(results.rows, CONCURRENCY_LIMIT, async (row: Row) => {
+    await eachLimit(results.rows, CONCURRENCY_LIMIT, async (row: Row, index: number) => {
       const key = row.key;
-      console.log(`Crawling pkg ${total_count + 1} ${key}`);
+      console.log(`Crawling pkg ${total_count + index + 1} ${key}`);
       const res = await fetch(`http://unpkg.com/${key}/package.json`);
       const pkg = await res.text();
-      total_count++;
       if (key.includes('/')) {
         const dir = `./data/individual/${key.split('/')[0]}`;
-        if (!fs.existsSync(dir)){
+        if (!fs.existsSync(dir)) {
           fs.mkdirSync(dir);
         }
       }
       await fs.promises.writeFile(path.resolve(`./data/individual/${key}.json`), pkg, { flag: 'w' });
     });
+
+    total_count += results.rows.length;
   }
 }
 
