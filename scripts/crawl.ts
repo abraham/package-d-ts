@@ -24,7 +24,7 @@ async function run() {
   console.log(`${API}?limit=${PAGE_LIMIT}&skip=${page * PAGE_LIMIT}`);
 
   const res = await fetch(`${API}?limit=${PAGE_LIMIT}&skip=${page * PAGE_LIMIT}`);
-  const results: Rows = await res.json();
+  const results = await res.json() as Rows;
   page++;
 
   if (total_count === results.total_rows) {
