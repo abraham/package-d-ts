@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "package.json TypeScript types",
   "main": "",
+  "engines": {
+    "node": "24"
+  },
   "scripts": {
     "build": "npx tsc",
     "lint": "npx tsc --noEmit",
