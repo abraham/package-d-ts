@@ -1,4 +1,3 @@
-import async from 'async';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import path from 'path';
@@ -16,6 +15,20 @@ let total_count = page * PAGE_LIMIT;
 const CONCURRENCY_LIMIT = 100;
 const API = 'https://replicate.npmjs.com/_all_docs';
 
+async function eachLimit<T>(values: T[], limit: number, worker: (value: T) => Promise<void>) {
+  let index = 0;
+
+  async function runWorker() {
+    while (index < values.length) {
+      const current = values[index];
+      index++;
+      await worker(current);
+    }
+  }
+
+  await Promise.all(Array(Math.min(limit, values.length)).fill(undefined).map(() => runWorker()));
+}
+
 async function run() {
   console.log(`Starting page ${page}`);
 
@@ -32,7 +45,7 @@ async function run() {
     return;
   }
 
-  await async.eachLimit(results.rows, CONCURRENCY_LIMIT, async (row: Row) => {
+  await eachLimit(results.rows, CONCURRENCY_LIMIT, async (row: Row) => {
     const key = row.key;
     console.log(`Crawling pkg ${total_count + 1} ${key}`);
     const res = await fetch(`http://unpkg.com/${key}/package.json`);
@@ -47,10 +60,9 @@ async function run() {
     fs.writeFile(path.resolve(`./data/individual/${key}.json`), pkg, { flag: 'w' }, (error) => {
       if (error) { console.log({ key, error }); }
     });
-    return row.key;
-  }, () => {
-    run();
   });
+
+  await run();
 }
 
 run();
