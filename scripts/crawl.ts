@@ -20,11 +20,11 @@ async function eachLimit<T>(values: T[], limit: number, worker: (value: T, index
 
   for (let index = 0; index < values.length; index++) {
     const value = values[index];
-    let task: Promise<void>;
-    task = worker(value, index).finally(() => {
+    const task = worker(value, index);
+    executing.add(task);
+    void task.finally(() => {
       executing.delete(task);
     });
-    executing.add(task);
     if (executing.size >= limit) {
       await Promise.race(executing);
     }
@@ -50,9 +50,11 @@ async function run() {
       return;
     }
 
+    const pageStartCount = total_count;
+
     await eachLimit(results.rows, CONCURRENCY_LIMIT, async (row: Row, index: number) => {
       const key = row.key;
-      console.log(`Crawling pkg ${total_count + index + 1} ${key}`);
+      console.log(`Crawling pkg ${pageStartCount + index + 1} ${key}`);
       const res = await fetch(`http://unpkg.com/${key}/package.json`);
       const pkg = await res.text();
       if (key.includes('/')) {
@@ -61,7 +63,11 @@ async function run() {
           fs.mkdirSync(dir);
         }
       }
-      await fs.promises.writeFile(path.resolve(`./data/individual/${key}.json`), pkg, { flag: 'w' });
+      try {
+        await fs.promises.writeFile(path.resolve(`./data/individual/${key}.json`), pkg, { flag: 'w' });
+      } catch (error) {
+        console.log({ key, error });
+      }
     });
 
     total_count += results.rows.length;
